@@ -5,21 +5,17 @@ import { EventDetails, RegistrationForm, Speakers, Schedule, Testimonials, Socia
 import AdminPage from './components/AdminPage';
 import './App.css';
 
-function Header() {
+function Header({ scheduleRef, speakersRef, registerRef, testimonialsRef, contactRef, faqRef }) {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const scheduleRef = useRef(null);
-  const speakersRef = useRef(null);
-  const registerRef = useRef(null);
-  const testimonialsRef = useRef(null);
-  const contactRef = useRef(null);
-  const faqRef = useRef(null);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const scrollToSection = (ref) => {
-    ref.current.scrollIntoView({ behavior: 'smooth' });
-    setIsMenuOpen(false);
+    if (ref && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth' });
+      setIsMenuOpen(false); // Close the menu on mobile after clicking
+    }
   };
 
   if (location.pathname === '/admin') {
@@ -60,13 +56,22 @@ function App() {
   const faqRef = useRef(null);
 
   const scrollToSection = (ref) => {
-    ref.current.scrollIntoView({ behavior: 'smooth' });
+    if (ref && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (
     <Router>
       <div className="App">
-        <Header />
+        <Header
+          scheduleRef={scheduleRef}
+          speakersRef={speakersRef}
+          registerRef={registerRef}
+          testimonialsRef={testimonialsRef}
+          contactRef={contactRef}
+          faqRef={faqRef}
+        />
         <Routes>
           <Route
             path="/"
@@ -76,10 +81,9 @@ function App() {
                 <section ref={scheduleRef} className="section"><Schedule /></section>
                 <section ref={speakersRef} className="section"><Speakers /></section>
                 <section ref={registerRef} className="section">
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-  <button className="cta-button" onClick={() => scrollToSection(registerRef)}>Register Here</button>
-</div>
-
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    <button className="cta-button" onClick={() => scrollToSection(registerRef)}>Register Here</button>
+                  </div>
                   <RegistrationForm />
                 </section>
                 <section ref={testimonialsRef} className="section"><Testimonials /></section>
