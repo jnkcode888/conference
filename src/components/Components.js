@@ -1,6 +1,6 @@
 // src/components/Components.js
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient'; // Adjust path based on your structure
+import { supabase } from '../supabaseClient';
 import { FaFacebook, FaTwitter, FaLinkedin } from 'react-icons/fa';
 
 // EventDetails
@@ -20,22 +20,71 @@ export function EventDetails({ scrollToRegister }) {
 
 // RegistrationForm
 export function RegistrationForm() {
-  const [formData, setFormData] = useState({ fullName: '', email: '', organization: '', position: '' });
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    organization: '',
+    position: '',
+    attendanceType: '',
+    interestedSessions: [],
+    certificateRequired: false,
+    registrationType: '',
+    paymentMethod: '',
+    invoiceRequested: false,
+    invoiceDetails: '',
+    hotelRecommendations: null,
+    airportTransfer: null,
+  });
   const [message, setMessage] = useState('');
   const [showPopup, setShowPopup] = useState(false);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSessionsChange = (e) => {
+    const { value, checked } = e.target;
+    setFormData((prev) => {
+      const sessions = checked
+        ? [...prev.interestedSessions, value]
+        : prev.interestedSessions.filter((session) => session !== value);
+      return { ...prev, interestedSessions: sessions };
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.interestedSessions.length === 0) {
+      setMessage('Please select at least one session.');
+      return;
+    }
+    if (formData.hotelRecommendations === null || formData.airportTransfer === null) {
+      setMessage('Please answer all Yes/No questions.');
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from('attendees')
         .insert([{
           full_name: formData.fullName,
           email: formData.email,
+          phone_number: formData.phoneNumber,
           organization: formData.organization || null,
           position: formData.position || null,
+          attendance_type: formData.attendanceType,
+          interested_sessions: formData.interestedSessions.join(', '),
+          certificate_required: formData.certificateRequired,
+          registration_type: formData.registrationType,
+          payment_method: formData.paymentMethod,
+          invoice_requested: formData.invoiceRequested,
+          invoice_details: formData.invoiceRequested ? formData.invoiceDetails : null,
+          hotel_recommendations: formData.hotelRecommendations,
+          airport_transfer: formData.airportTransfer,
         }])
         .select();
 
@@ -49,7 +98,23 @@ export function RegistrationForm() {
       } else {
         console.log('Registration Success:', data);
         setShowPopup(true);
-        setFormData({ fullName: '', email: '', organization: '', position: '' });
+        setFormData({
+          fullName: '',
+          email: '',
+          phoneNumber: '',
+          organization: '',
+          position: '',
+          attendanceType: '',
+          interestedSessions: [],
+          certificateRequired: false,
+          registrationType: '',
+          paymentMethod: '',
+          invoiceRequested: false,
+          invoiceDetails: '',
+          hotelRecommendations: null,
+          airportTransfer: null,
+        });
+        setMessage('');
         setTimeout(() => setShowPopup(false), 3000);
       }
     } catch (err) {
@@ -62,17 +127,223 @@ export function RegistrationForm() {
     <section>
       <h2>Secure Your Spot</h2>
       <form onSubmit={handleSubmit}>
-        <input type="text" name="fullName" placeholder="Full Name" value={formData.fullName} onChange={handleChange} required />
-        <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} required />
-        <input type="text" name="organization" placeholder="Organization" value={formData.organization} onChange={handleChange} />
-        <input type="text" name="position" placeholder="Position" value={formData.position} onChange={handleChange} />
+        <input
+          type="text"
+          name="fullName"
+          placeholder="Full Name"
+          value={formData.fullName}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email Address"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="tel"
+          name="phoneNumber"
+          placeholder="Phone Number"
+          value={formData.phoneNumber}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="organization"
+          placeholder="Organization/Company"
+          value={formData.organization}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="position"
+          placeholder="Job Title/Position"
+          value={formData.position}
+          onChange={handleChange}
+        />
+
+        <div className="form-group">
+          <label>Are you attending in person or virtually?</label>
+          <label>
+            <input
+              type="radio"
+              name="attendanceType"
+              value="In-Person"
+              checked={formData.attendanceType === 'In-Person'}
+              onChange={handleChange}
+              required
+            />
+            In-Person
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="attendanceType"
+              value="Virtual"
+              checked={formData.attendanceType === 'Virtual'}
+              onChange={handleChange}
+            />
+            Virtual
+          </label>
+        </div>
+
+        <div className="form-group">
+          <label>Select the sessions you're most interested in (choose all that apply):</label>
+          {[
+            'Keynote: The Next Decade of Impact',
+            'Workshop: Fundraising Unleashed',
+            'Panel: Tech for Change',
+            'Session: Impact That Sticks',
+          ].map((session) => (
+            <label key={session} className="checkbox-label">
+              <input
+                type="checkbox"
+                name="interestedSessions"
+                value={session}
+                checked={formData.interestedSessions.includes(session)}
+                onChange={handleSessionsChange}
+              />
+              {session}
+            </label>
+          ))}
+        </div>
+
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            name="certificateRequired"
+            checked={formData.certificateRequired}
+            onChange={handleChange}
+          />
+          Do you require a certificate of participation?
+        </label>
+
+        <div className="form-group">
+          <label>Registration Type:</label>
+          <select
+            name="registrationType"
+            value={formData.registrationType}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select Registration Type</option>
+            <option value="General">General</option>
+            <option value="Student">Student</option>
+            <option value="VIP">VIP</option>
+            <option value="Speaker">Speaker</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Payment Method:</label>
+          <select
+            name="paymentMethod"
+            value={formData.paymentMethod}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select Payment Method</option>
+            <option value="Mpesa">Mpesa</option>
+            <option value="Credit/Debit Card">Credit/Debit Card</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Invoice Request:</label>
+          <label>
+            <input
+              type="radio"
+              name="invoiceRequested"
+              value="true"
+              checked={formData.invoiceRequested === true}
+              onChange={() => setFormData((prev) => ({ ...prev, invoiceRequested: true }))}
+            />
+            Yes
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="invoiceRequested"
+              value="false"
+              checked={formData.invoiceRequested === false}
+              onChange={() => setFormData((prev) => ({ ...prev, invoiceRequested: false, invoiceDetails: '' }))}
+            />
+            No
+          </label>
+          {formData.invoiceRequested && (
+            <input
+              type="text"
+              name="invoiceDetails"
+              placeholder="Invoice Details (e.g., Company Name, Address)"
+              value={formData.invoiceDetails}
+              onChange={handleChange}
+              required={formData.invoiceRequested}
+            />
+          )}
+        </div>
+
+        <div className="form-group">
+          <label>Do you need hotel recommendations?</label>
+          <label>
+            <input
+              type="radio"
+              name="hotelRecommendations"
+              value="true"
+              checked={formData.hotelRecommendations === true}
+              onChange={() => setFormData((prev) => ({ ...prev, hotelRecommendations: true }))}
+              required
+            />
+            Yes
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="hotelRecommendations"
+              value="false"
+              checked={formData.hotelRecommendations === false}
+              onChange={() => setFormData((prev) => ({ ...prev, hotelRecommendations: false }))}
+            />
+            No
+          </label>
+        </div>
+
+        <div className="form-group">
+          <label>Will you require airport transfer?</label>
+          <label>
+            <input
+              type="radio"
+              name="airportTransfer"
+              value="true"
+              checked={formData.airportTransfer === true}
+              onChange={() => setFormData((prev) => ({ ...prev, airportTransfer: true }))}
+              required
+            />
+            Yes
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="airportTransfer"
+              value="false"
+              checked={formData.airportTransfer === false}
+              onChange={() => setFormData((prev) => ({ ...prev, airportTransfer: false }))}
+            />
+            No
+          </label>
+        </div>
+
         <button type="submit">Register</button>
       </form>
       {message && <p className="form-message">{message}</p>}
       {showPopup && (
         <div className="popup-overlay">
           <div className="popup-content">
-            <p>You’re registered! See you in Nairobi.</p>
+            <p>You're registered! See you in Nairobi.</p>
           </div>
         </div>
       )}
@@ -90,13 +361,11 @@ export function Speakers() {
           <img src="/speaker1.jpg" alt="Dr. Amina Otieno" className="speaker-image" />
           <h3>Dr. Amina Otieno</h3>
           <p>Innovator | Keynote Speaker</p>
-          <p>Pioneering nonprofit solutions for over two decades.</p>
         </div>
         <div className="speaker">
           <img src="/speaker2.jpg" alt="Shanice Singirankabo" className="speaker-image" />
           <h3>Shanice Singirankabo</h3>
-          <p>Fundraising Guru</p>
-          <p>Mastermind behind $10M+ in grassroots funding.</p>
+          <p>Speaker</p>
         </div>
       </div>
     </section>
@@ -201,7 +470,7 @@ export function EmailSignup() {
       {showPopup && (
         <div className="popup-overlay">
           <div className="popup-content">
-            <p>You’re in the loop!</p>
+            <p>You're in the loop!</p>
           </div>
         </div>
       )}
@@ -226,10 +495,11 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState(null);
 
   const faqs = [
+    { q: "What's Nonprofit Konnect?", a: "Nonprofit Konnect is a platform dedicated to connecting and empowering nonprofit organizations. Click the button below to learn more." },
     { q: "How do I register?", a: "Just fill out the form above—it takes less than a minute!" },
-    { q: "When’s the deadline?", a: "October 31, 2025, or when we’re full—secure your spot soon!" },
-    { q: "Where should I stay?", a: "We’ll email you a list of nearby hotels after you register." },
-    { q: "What’s the dress code?", a: "Business casual—look sharp, feel comfy." },
+    { q: "When's the deadline?", a: "October 31, 2025, or when we're full—secure your spot soon!" },
+    { q: "Where should I stay?", a: "We'll email you a list of nearby hotels after you register." },
+    { q: "What's the dress code?", a: "Business casual—look sharp, feel comfy." },
     { q: "Who do I contact?", a: "Email us at info@nonprofitkonnect.org or call +254 115265874." },
   ];
 
@@ -247,6 +517,11 @@ export function FAQ() {
             </button>
             <div className={`faq-answer ${openIndex === index ? 'open' : ''}`}>
               <p>{faq.a}</p>
+              {index === 0 && (
+                <a href="https://nonprofitkonnect.org/" target="_blank" rel="noopener noreferrer" className="cta-button" style={{ marginTop: '10px', display: 'inline-block' }}>
+                  Read More
+                </a>
+              )}
             </div>
           </div>
         ))}
